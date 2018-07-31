@@ -66,6 +66,7 @@ class Client:
     def compileResponseElement(self, rawdata):
         # define child response type -> compiler function
         ResponseProcessors = {
+            'LocValRes': self.compileLocValRes,
         }
         # get tag of child response
         tag = self.removeURNEXTXML(rawdata.tag)
@@ -77,4 +78,89 @@ class Client:
         # get child response compiler and call it
         data = ResponseProcessors[tag](rawdata)
         return(tag, data)
+
+    def searchList(self, reqs):
+        # check data type
+        if type(reqs) != list:
+            raise TypeError
+        # get basic XML
+        xml = self.genBaseXML()
+        i = 0  # variable for id
+        # I think we dont need this ID. I just dont trust the server.
+        # Maybe it will mess-up the requests. I dont know
+        # iterate over querys
+        for query, qtype in reqs:
+            # check query string type
+            if type(query) != str:
+                raise TypeError
+            # check request type
+            if qtype not in ['ST', 'ADR', 'POI', 'ALLTYPE']:
+                raise ValueError
+            # generate LocValReq element with ID
+            reqxml = etree.SubElement(xml, 'LocValReq', attrib={'id': str(i)})
+            # generate ReqLoc element with request query and type
+            reqxmlsub = etree.SubElement(reqxml, 'ReqLoc', attrib={
+                'match': query, 'type': qtype
+            }
+            )
+            i += 1  # increment id
+        # call the server
+        data = self.request(xml)
+        # check response type
+        if data[0] != 'LocValRes':
+            raise TypeError
+        ressdict = {}
+        # iterate over response childs
+        for res in data[1]:
+            # check type
+            if res[0] != 'LocValRes':
+                raise TypeError
+            resraw = res[1]  # child response data
+            resi = resraw[0]  # child response id
+            resd = resraw[1]  # child response stops/stations/poi/...
+            # save id->data
+            ressdict[resi] = resd
+        # generate a list with the child responses stations/... sorted by id
+        ress = [ressdict[i] for i in sorted(ressdict.keys())]
+        # return data
+        return(ress)
+
+    def searchOne(self, query, qtype):
+        # just search one query and return the first child response
+        return(self.searchList([(query, qtype)])[0])
+
+    def searchStations(self, query):
+        # seacrch for one station
+        return(self.searchOne(query, 'ST'))
+
+    def searchAddresses(self, query):
+        # search for one address
+        return(self.searchOne(query, 'ADR'))
+
+    def searchPOIs(self, query):
+        # search for one POI
+        return(self.searchOne(query, 'POI'))
+
+    def searchAll(self, query):
+        # search for one of any type
+        return(self.searchOne(query, 'ALLTYPE'))
+
+    def compileLocValRes(self, rawdata):
+        # list for response items
+        data = []
+        # get id value
+        reqid = rawdata.get('id')
+        for c in rawdata.iterchildren():
+            # parse it
+            o = self.convertBasicLocationStationToFPTF(c)
+            # add to list if not empty
+            if o != {}:
+                data.append(o)
+        return(reqid, data)
+
+    def removeURNEXTXML(self, data):
+        if '{urn:ExtXml}' not in data:
+            return(data)
+        data = data.split('{urn:ExtXml}')[1]
+        return(data)
 
