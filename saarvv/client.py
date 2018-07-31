@@ -159,6 +159,7 @@ class Client:
         return(reqid, data)
 
     def removeURNEXTXML(self, data):
+        #delete the strange '{urn:ExtXml}' from a string
         if '{urn:ExtXml}' not in data:
             return(data)
         data = data.split('{urn:ExtXml}')[1]
