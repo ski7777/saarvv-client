@@ -3,6 +3,8 @@
 #
 import requests
 from lxml import etree
+import pytz
+from datetime import datetime, timedelta
 from . import Debug
 
 
@@ -157,11 +159,88 @@ class Client:
             if o != {}:
                 data.append(o)
         return(reqid, data)
+    def convertBasicLocationStationToFPTF(self, rawdata):
+        # get tag
+        tag = self.removeURNEXTXML(rawdata.tag)
+        if tag == 'Station':
+            # covert station to FPTF
+            return(self.convertStationToFPTF(rawdata))
+        elif tag in ['Address', 'Poi', 'ReqLoc']:
+            try:
+                # covert location to FPTF
+                return(self.convertBasicLocationToFPTF(rawdata))
+            except ValueError:
+                return({})
+        else:
+            # type unknown -> error
+            raise ValueError
+
+    def convertDateTimeToISO8601(self, rawtime):
+        # converts a hafas Time Element to a good time format
+        now = datetime.now(self.tz)
+        timelist = []
+        # I´m not sure whether the day element is always present
+        # So I just asume it is optional
+        # parse day element
+        if 'd' in rawtime:
+            timelist.append(int(rawtime.split('d')[0]))
+        # parse the rest
+        timelist += [int(e) for e in rawtime[-8:].split(':')]
+        # validate it
+        if len(timelist) < 3 or len(timelist) > 4:
+            raise ValueError
+        if len(timelist) == 3:
+            timelist = [0] + timelist
+        # add day offset
+        now = now + timedelta(days=timelist[0])
+        # convert everything to a string
+        year = str(now.year)
+        month = str(now.month).zfill(2)
+        day = str(now.day).zfill(2)
+        hour = str(timelist[1]).zfill(2)
+        minutes = str(timelist[2]).zfill(2)
+        seconds = str(timelist[3]).zfill(2)
+        # calc timezone offset
+        # @Hacon: Please add it to your time format. It´s so important...
+        dst = self.getIsDST()
+        if dst:
+            zone = '+02:00'
+        else:
+            zone = '+01:00'
+        # generate the whole string
+        return('-'.join([year, month, day]) +
+               'T' +
+               ':'.join([hour, minutes, seconds]) +
+               zone
+               )
 
     def removeURNEXTXML(self, data):
-        #delete the strange '{urn:ExtXml}' from a string
+        # delete the strange '{urn:ExtXml}' from a string
         if '{urn:ExtXml}' not in data:
             return(data)
         data = data.split('{urn:ExtXml}')[1]
         return(data)
+
+    def generateTime(self, data, parent):
+        #generate a Hafas ReqT
+        if not ('date' in data and 'time' in data):
+            raise ValueError
+        attr = {'time': data['time'], 'date': data['date']}
+        #add 'a' tag. a=0-> time is departure time, a=1-> arrival time
+        if 'type' not in data:
+            attr['a'] = "0"
+        elif data['type'] not in ['departure', 'arrival']:
+            raise ValueError
+        elif data['type'] == 'departure':
+            attr['a'] = "0"
+        else:
+            attr['a'] = "1"
+        etree.SubElement(parent, 'ReqT', attrib=attr)
+
+    def getIsDST(self):
+        # check whether we are in DST
+        # hafas just uses the local time. It does not care about timezones and dst
+        # thus we have to calc everything on our own...
+        now = pytz.utc.localize(datetime.utcnow())
+        return(now.astimezone(self.tz).dst() != timedelta(0))
 
