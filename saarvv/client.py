@@ -161,12 +161,12 @@ class Client:
                 data.append(o)
         return(reqid, data)
     def getFromDictFallback(self, rawdata, key, fallback):
-        #try to find key in dict
+        # try to find key in dict
         if key in rawdata:
-            #found -> return it
+            # found -> return it
             return(rawdata[key])
         else:
-            #not found -> return fallback
+            # not found -> return fallback
             return(fallback)
 
     def convertBasicLocationStationToFPTF(self, rawdata):
