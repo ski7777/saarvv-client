@@ -169,6 +169,22 @@ class Client:
             # not found -> return fallback
             return(fallback)
 
+    def getStationLocationFromBasicStop(self, rawdata):
+        # get subtags of BasicStop
+        subtags = [self.removeURNEXTXML(e.tag) for e in rawdata.iter()]
+        # try to find Station, POI, Address in subtags
+        for t in ['Station', 'POI', 'Address']:
+            if t in subtags:
+                # get location
+                return(self.convertBasicLocationStationToFPTF(rawdata.find('{urn:ExtXml}' + t)))
+        # not found -> error
+        raise ValueError
+
+    def getPlatform(self, rawdata):
+        # get platform from BasicStop
+        platform = list(rawdata.iter('{urn:ExtXml}Platform'))[0]
+        return(platform.find('{urn:ExtXml}Text').text)
+
     def convertBasicLocationStationToFPTF(self, rawdata):
         # get tag
         tag = self.removeURNEXTXML(rawdata.tag)
