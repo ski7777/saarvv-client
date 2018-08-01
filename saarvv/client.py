@@ -414,6 +414,27 @@ class Client:
         # add XML element
         etree.SubElement(parent, 'RFlags', attrib=attr)
 
+    def convertQueryToFPTFList(self, rawdata):
+        # create query touples with ALLTYPE
+        req = [(q, 'ALLTYPE') for q in rawdata]
+        # query server
+        data = [s[0] for s in self.searchList(req)]
+        return(data)
+
+    def convertFPTFPosToXML(self, data, parent):
+        if 'type' not in data:
+            raise ValueError
+        # check type is either statin or stop
+        if data['type'] in ['station', 'stop']:
+            if 'id' not in data:
+                # id not found -> error
+                raise ValueError
+            # create XML element
+            etree.SubElement(parent, 'Station', attrib={'externalId': data['id']})
+        else:
+            # other type -> error
+            raise ValueError
+
     def generateTime(self, data, parent):
         # generate a Hafas ReqT
         if not ('date' in data and 'time' in data):
