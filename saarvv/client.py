@@ -372,6 +372,32 @@ class Client:
         data['longitude'] = int(x) / 10
         return(data)
 
+    def generateProductFilter(self, prod, parent):
+        # this is a dummy fucntion
+        # TODO: ask ZPS for the file 'zugart'
+        etree.SubElement(parent, 'Prod', attrib={'prod': '11111111111'})
+
+    def generateRFlags(self, data, parent):
+        if not ('nbefore' in data and 'nafter' in data):
+            raise ValueError
+        if data['nbefore'] > 1 or data['nafter'] > 5:
+            raise ValueError
+        # add b and f
+        attr = {'b': str(data['nbefore']), 'f': str(data['nafter'])}
+        if 'changes' in data:
+            if changes > 6:
+                raise ValueError
+            # add nrChanges
+            attr['nrChanges'] = data['changes']
+        # add getPrice
+        attr['getPrice'] = '0'
+        if 'price' in data:
+            if data['price']:
+                # set getPrice to 1 if needed
+                attr['getPrice'] = '1'
+        # add XML element
+        etree.SubElement(parent, 'RFlags', attrib=attr)
+
     def generateTime(self, data, parent):
         # generate a Hafas ReqT
         if not ('date' in data and 'time' in data):
