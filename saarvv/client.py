@@ -5,6 +5,7 @@ import requests
 from lxml import etree
 import pytz
 from datetime import datetime, timedelta
+import dateutil.parser
 from . import Debug
 
 
@@ -174,6 +175,52 @@ class Client:
         else:
             # type unknown -> error
             raise ValueError
+
+    def getDepartureTime(self, rawdata):
+        try:
+            # get raw time
+            dep = rawdata.find('{urn:ExtXml}Dep')
+            t = dep.find('{urn:ExtXml}Time').text
+        except:
+            raise ValueError
+        # convert it
+        return(self.convertDateTimeToISO8601(t))
+
+    def getDepartureDelay(self, rawxml, deptime):
+        try:
+            # get raw time
+            sp = rawxml.find('{urn:ExtXml}StopPrognosis')
+            delt = dateutil.parser.parse(self.getDepartureTime(sp))
+        except:
+            # no delay data available -> return None
+            return(None)
+        # load planned time
+        dept = dateutil.parser.parse(deptime)
+        # return timedelta in seconds
+        return(int((delt - dept).total_seconds()))
+
+    def getArrivalTime(self, rawdata):
+        try:
+            # get raw time
+            arr = rawdata.find('{urn:ExtXml}Arr')
+            t = arr.find('{urn:ExtXml}Time').text
+        except:
+            raise ValueError
+        # convert it
+        return(self.convertDateTimeToISO8601(t))
+
+    def getArrivalDelay(self, rawxml, arrtime):
+        try:
+            # get raw time
+            sp = rawxml.find('{urn:ExtXml}StopPrognosis')
+            delt = dateutil.parser.parse(self.getArrivalTime(sp))
+        except:
+            # no delay data available -> return None
+            return(None)
+        # load planned time
+        arrt = dateutil.parser.parse(arrtime)
+        # return timedelta in seconds
+        return(int((delt - arrt).total_seconds()))
 
     def convertDateTimeToISO8601(self, rawtime):
         # converts a hafas Time Element to a good time format
