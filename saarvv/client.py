@@ -336,11 +336,11 @@ class Client:
         return(data)
 
     def generateTime(self, data, parent):
-        #generate a Hafas ReqT
+        # generate a Hafas ReqT
         if not ('date' in data and 'time' in data):
             raise ValueError
         attr = {'time': data['time'], 'date': data['date']}
-        #add 'a' tag. a=0-> time is departure time, a=1-> arrival time
+        # add 'a' tag. a=0-> time is departure time, a=1-> arrival time
         if 'type' not in data:
             attr['a'] = "0"
         elif data['type'] not in ['departure', 'arrival']:
