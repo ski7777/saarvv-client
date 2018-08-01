@@ -160,6 +160,15 @@ class Client:
             if o != {}:
                 data.append(o)
         return(reqid, data)
+    def getFromDictFallback(self, rawdata, key, fallback):
+        #try to find key in dict
+        if key in rawdata:
+            #found -> return it
+            return(rawdata[key])
+        else:
+            #not found -> return fallback
+            return(fallback)
+
     def convertBasicLocationStationToFPTF(self, rawdata):
         # get tag
         tag = self.removeURNEXTXML(rawdata.tag)
@@ -175,6 +184,64 @@ class Client:
         else:
             # type unknown -> error
             raise ValueError
+
+    def getJourneyAttributes(self, rawdata):
+        data = []
+        # iter over attributes
+        for a in rawdata.iter('{urn:ExtXml}JourneyAttribute'):
+            # prepare dict and basic information
+            attr = {
+                'from': int(a.get('from')),
+                'to': int(a.get('to')),
+                'variants': {}
+            }
+            # iter over attribute variants and texts
+            for aa in a.iter('{urn:ExtXml}Attribute'):
+                for v in aa.iter('{urn:ExtXml}AttributeVariant'):
+                    for t in v.iter('{urn:ExtXml}Text'):
+                        # add variant->text
+                        attr['variants'][v.get('type')] = t.text
+            # add attribute
+            data.append(attr)
+        return(data)
+
+    def getOperator(self, attr):
+        # one attribute type can occur multiple times
+        # every attrubute has a to and a from value
+        # so we can calculate which attribute is active for the longest time
+        rawoperator = {}
+        maxlength = 0
+        # iterate over attributes
+        for o in attr:
+            # check whether attribute is operator
+            if o['name'] == 'OPERATOR':
+                # calc length
+                length = o['to'] - o['from']
+                # save this att if its length is longer than the last one
+                if length > maxlength:
+                    rawoperator = o
+        # no operator found -> {}
+        if rawoperator == {}:
+            return({})
+        operator = {'type': 'operator'}
+        # iterate over attribute variant types
+        # we try to get the shortest one available
+        for t in ['SHORT', 'NORMAL', 'LONG']:
+            if t in rawoperator['variants']:
+                # save this one as id
+                operator['id'] = rawoperator['variants'][t]
+                break
+        # raise error if not found
+        if 'id' not in operator:
+            raise ValueError
+        # iterate over attribute variant types
+        # we try to get the longest one available
+        for t in ['LONG', 'NORMAL', 'SHORT']:
+            if t in rawoperator['variants']:
+                # save this one as name
+                operator['name'] = rawoperator['variants'][t]
+                break
+        return(operator)
 
     def getDepartureTime(self, rawdata):
         try:
