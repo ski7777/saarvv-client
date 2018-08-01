@@ -328,11 +328,48 @@ class Client:
                zone
                )
 
+    def convertStationToFPTF(self, xmldata):
+        data = {'type': 'station'}
+        # add all attributes
+        data['id'] = xmldata.get('externalStationNr')
+        data['name'] = xmldata.get('name')
+        data['location'] = {'type': 'location'}
+        data['location']['name'] = data['name']
+        data['location'].update(self.calcCoordinate(xmldata))
+        return(data)
+
+    def convertBasicLocationToFPTF(self, xmldata):
+        data = {'type': 'location'}
+        # get name
+        data['name'] = xmldata.get('name')
+        if data['name'] is None:
+            # not found -> try alternative methode
+            data['name'] = xmldata.get('output')
+        if data['name'] is None:
+            # still not found -> error
+            raise ValueError
+        # add coordinate
+        data.update(self.calcCoordinate(xmldata))
+        return(data)
+
     def removeURNEXTXML(self, data):
         # delete the strange '{urn:ExtXml}' from a string
         if '{urn:ExtXml}' not in data:
             return(data)
         data = data.split('{urn:ExtXml}')[1]
+        return(data)
+
+    def calcCoordinate(self, rawdata):
+        # get values
+        x = rawdata.get('x')
+        y = rawdata.get('y')
+        if x is None or y is None:
+            return({})
+        data = {}
+        # some calculations
+        # @hacon: What about using floats...
+        data['latitude'] = int(y) / 100
+        data['longitude'] = int(x) / 10
         return(data)
 
     def generateTime(self, data, parent):
