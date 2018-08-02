@@ -213,6 +213,8 @@ class Client:
             }
             # iter over attribute variants and texts
             for aa in a.iter('{urn:ExtXml}Attribute'):
+                # set attrubute name
+                attr['name'] = aa.get('type')
                 for v in aa.iter('{urn:ExtXml}AttributeVariant'):
                     for t in v.iter('{urn:ExtXml}Text'):
                         # add variant->text
