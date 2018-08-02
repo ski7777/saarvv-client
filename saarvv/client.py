@@ -216,9 +216,12 @@ class Client:
                 # set attrubute name
                 attr['name'] = aa.get('type')
                 for v in aa.iter('{urn:ExtXml}AttributeVariant'):
+                    atype = v.get('type')
+                    texts = []
                     for t in v.iter('{urn:ExtXml}Text'):
                         # add variant->text
-                        attr['variants'][v.get('type')] = t.text
+                        texts.append(t.text)
+                    attr['variants'][atype] = texts
             # add attribute
             data.append(attr)
         return(data)
@@ -246,9 +249,12 @@ class Client:
         # we try to get the shortest one available
         for t in ['SHORT', 'NORMAL', 'LONG']:
             if t in rawoperator['variants']:
-                # save this one as id
-                operator['id'] = rawoperator['variants'][t]
-                break
+                # iterate over texts
+                for i in rawoperator['variants'][t]:
+                    if i != '':
+                        # save the first not empty one
+                        operator['id'] = i
+                        break
         # raise error if not found
         if 'id' not in operator:
             raise ValueError
@@ -256,9 +262,12 @@ class Client:
         # we try to get the longest one available
         for t in ['LONG', 'NORMAL', 'SHORT']:
             if t in rawoperator['variants']:
-                # save this one as name
-                operator['name'] = rawoperator['variants'][t]
-                break
+                # iterate over texts
+                for n in rawoperator['variants'][t]:
+                    if i != '':
+                        # save the first not empty one
+                        operator['name'] = n
+                        break
         return(operator)
 
     def getDepartureTime(self, rawdata):
